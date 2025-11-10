@@ -1,1 +1,2 @@
-# MinMat_Backend-CI-CD
+# java-spring
+Proyecto spring base para cursos de proyecto

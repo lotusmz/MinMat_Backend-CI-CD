@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.project.demo.DemoApplicationTests" tests="1" skipped="1" failures="0" errors="0" timestamp="2025-10-14T06:43:06" hostname="PT-RQUIROS-LAP" time="0.001">
+  <properties/>
+  <testcase name="contextLoads()" classname="com.project.demo.DemoApplicationTests" time="0.001">
+    <skipped/>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
