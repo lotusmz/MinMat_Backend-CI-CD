@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderRestController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MindMat Backend</a> &gt; <a href="index.source.html" class="el_package">com.project.demo.rest.order</a> &gt; <span class="el_source">OrderRestController.java</span></div><h1>OrderRestController.java</h1><pre class="source lang-java linenums">package com.project.demo.rest.order;
+
+import com.project.demo.logic.entity.http.GlobalResponseHandler;
+import com.project.demo.logic.entity.http.Meta;
+import com.project.demo.logic.entity.order.Order;
+import com.project.demo.logic.entity.order.OrderRepository;
+import com.project.demo.logic.entity.user.User;
+import com.project.demo.logic.entity.user.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Optional;
+
+@RestController
+@RequestMapping(&quot;/orders&quot;)
+<span class="nc" id="L23">public class OrderRestController {</span>
+    @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @GetMapping
+    @PreAuthorize(&quot;isAuthenticated()&quot;)
+    public ResponseEntity&lt;?&gt; getAll(
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            HttpServletRequest request) {
+
+<span class="nc" id="L37">            Pageable pageable = PageRequest.of(page-1, size);</span>
+<span class="nc" id="L38">            Page&lt;Order&gt; ordersPage = orderRepository.findAll(pageable);</span>
+<span class="nc" id="L39">            Meta meta = new Meta(request.getMethod(), request.getRequestURL().toString());</span>
+<span class="nc" id="L40">            meta.setTotalPages(ordersPage.getTotalPages());</span>
+<span class="nc" id="L41">            meta.setTotalElements(ordersPage.getTotalElements());</span>
+<span class="nc" id="L42">            meta.setPageNumber(ordersPage.getNumber() + 1);</span>
+<span class="nc" id="L43">            meta.setPageSize(ordersPage.getSize());</span>
+
+<span class="nc" id="L45">            return new GlobalResponseHandler().handleResponse(&quot;Order retrieved successfully&quot;,</span>
+<span class="nc" id="L46">                    ordersPage.getContent(), HttpStatus.OK, meta);</span>
+    }
+
+    @GetMapping(&quot;/user/{userId}/orders&quot;)
+    @PreAuthorize(&quot;isAuthenticated()&quot;)
+    public ResponseEntity&lt;?&gt; getAllByUser (@PathVariable Long userId,
+                                           @RequestParam(defaultValue = &quot;1&quot;) int page,
+                                           @RequestParam(defaultValue = &quot;10&quot;) int size,
+                                           HttpServletRequest request) {
+<span class="nc" id="L55">        Optional&lt;User&gt; foundUser = userRepository.findById(userId);</span>
+<span class="nc bnc" id="L56" title="All 2 branches missed.">        if(foundUser.isPresent()) {</span>
+
+
+<span class="nc" id="L59">            Pageable pageable = PageRequest.of(page-1, size);</span>
+<span class="nc" id="L60">            Page&lt;Order&gt; ordersPage = orderRepository.getOrderByUserId(userId, pageable);</span>
+<span class="nc" id="L61">            Meta meta = new Meta(request.getMethod(), request.getRequestURL().toString());</span>
+<span class="nc" id="L62">            meta.setTotalPages(ordersPage.getTotalPages());</span>
+<span class="nc" id="L63">            meta.setTotalElements(ordersPage.getTotalElements());</span>
+<span class="nc" id="L64">            meta.setPageNumber(ordersPage.getNumber() + 1);</span>
+<span class="nc" id="L65">            meta.setPageSize(ordersPage.getSize());</span>
+
+
+<span class="nc" id="L68">            return new GlobalResponseHandler().handleResponse(&quot;Order retrieved successfully&quot;,</span>
+<span class="nc" id="L69">                    ordersPage.getContent(), HttpStatus.OK, meta);</span>
+        } else {
+<span class="nc" id="L71">            return new GlobalResponseHandler().handleResponse(&quot;User id &quot; + userId + &quot; not found&quot;  ,</span>
+                    HttpStatus.NOT_FOUND, request);
+        }
+    }
+
+    @PostMapping(&quot;/user/{userId}&quot;)
+    public ResponseEntity&lt;?&gt; addOrderToUser(@PathVariable Long userId, @RequestBody Order order, HttpServletRequest request) {
+<span class="nc" id="L78">        Optional&lt;User&gt; foundUser = userRepository.findById(userId);</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        if(foundUser.isPresent()) {</span>
+<span class="nc" id="L80">            order.setUser(foundUser.get());</span>
+<span class="nc" id="L81">            Order savedOrder = orderRepository.save(order);</span>
+<span class="nc" id="L82">            return new GlobalResponseHandler().handleResponse(&quot;Order created successfully&quot;,</span>
+                    savedOrder, HttpStatus.CREATED, request);
+        } else {
+<span class="nc" id="L85">            return new GlobalResponseHandler().handleResponse(&quot;User id &quot; + userId + &quot; not found&quot;  ,</span>
+                    HttpStatus.NOT_FOUND, request);
+        }
+    }
+
+    @PutMapping(&quot;/{orderId}&quot;)
+    public ResponseEntity&lt;?&gt; updateOrder(@PathVariable Long orderId, @RequestBody Order order, HttpServletRequest request) {
+<span class="nc" id="L92">        Optional&lt;Order&gt; foundOrder = orderRepository.findById(orderId);</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">        if(foundOrder.isPresent()) {</span>
+<span class="nc" id="L94">            order.setId(foundOrder.get().getId());</span>
+<span class="nc" id="L95">            order.setUser(foundOrder.get().getUser());</span>
+<span class="nc" id="L96">            orderRepository.save(order);</span>
+<span class="nc" id="L97">            return new GlobalResponseHandler().handleResponse(&quot;Order updated successfully&quot;,</span>
+                    order, HttpStatus.OK, request);
+        } else {
+<span class="nc" id="L100">            return new GlobalResponseHandler().handleResponse(&quot;Order id &quot; + orderId + &quot; not found&quot;  ,</span>
+                    HttpStatus.NOT_FOUND, request);
+        }
+    }
+
+    @PatchMapping(&quot;/{orderId}&quot;)
+    public ResponseEntity&lt;?&gt; patchOrder(@PathVariable Long orderId, @RequestBody Order order, HttpServletRequest request) {
+<span class="nc" id="L107">        Optional&lt;Order&gt; foundOrder = orderRepository.findById(orderId);</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">        if(foundOrder.isPresent()) {</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">            if(order.getTotal() != null) foundOrder.get().setTotal(order.getTotal());</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">            if(order.getDescription() != null) foundOrder.get().setDescription(order.getDescription());</span>
+<span class="nc" id="L111">            orderRepository.save(foundOrder.get());</span>
+<span class="nc" id="L112">            return new GlobalResponseHandler().handleResponse(&quot;Order updated successfully&quot;,</span>
+<span class="nc" id="L113">                    foundOrder.get(), HttpStatus.OK, request);</span>
+        } else {
+<span class="nc" id="L115">            return new GlobalResponseHandler().handleResponse(&quot;Order id &quot; + orderId + &quot; not found&quot;  ,</span>
+                    HttpStatus.NOT_FOUND, request);
+        }
+    }
+
+    @DeleteMapping(&quot;/{orderId}&quot;)
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;?&gt; deleteOrder(@PathVariable Long orderId, HttpServletRequest request) {
+<span class="nc" id="L123">        Optional&lt;Order&gt; foundOrder = orderRepository.findById(orderId);</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">        if(foundOrder.isPresent()) {</span>
+<span class="nc" id="L125">            Optional&lt;User&gt; user = userRepository.findById(foundOrder.get().getUser().getId());</span>
+            /*user.get().getOrders().remove(foundOrder.get());*/
+<span class="nc" id="L127">            orderRepository.deleteById(foundOrder.get().getId());</span>
+<span class="nc" id="L128">            return new GlobalResponseHandler().handleResponse(&quot;Order deleted successfully&quot;,</span>
+<span class="nc" id="L129">                    foundOrder.get(), HttpStatus.OK, request);</span>
+        } else {
+<span class="nc" id="L131">            return new GlobalResponseHandler().handleResponse(&quot;Order id &quot; + orderId + &quot; not found&quot;  ,</span>
+                    HttpStatus.NOT_FOUND, request);
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

@@ -1,0 +1,14 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+MindMat Backend,com.project.demo.rest.score,ScoreRestController,194,0,8,0,38,0,8,0,4,0
+MindMat Backend,com.project.demo.rest.team,TeamController,671,0,60,0,158,0,48,0,18,0
+MindMat Backend,com.project.demo.rest.product,ProductRestController,237,0,4,0,43,0,13,0,11,0
+MindMat Backend,com.project.demo.rest.order,OrderRestController,294,0,14,0,50,0,14,0,7,0
+MindMat Backend,com.project.demo.rest.mathleship,MathleshipRestController.AttackRequest,14,0,0,0,4,0,4,0,4,0
+MindMat Backend,com.project.demo.rest.mathleship,MathleshipRestController,427,0,36,0,86,0,28,0,10,0
+MindMat Backend,com.project.demo,CorsConfig,33,0,0,0,9,0,2,0,2,0
+MindMat Backend,com.project.demo.rest.category,CategoryRestController,210,0,10,0,35,0,13,0,8,0
+MindMat Backend,com.project.demo.rest.user,UserRestController,508,0,43,0,105,0,36,0,12,0
+MindMat Backend,com.project.demo.rest.user,UserAchievementRestController,72,247,9,9,9,48,9,6,0,6
+MindMat Backend,com.project.demo.rest.game,GameRestController,43,13,0,0,10,3,4,3,4,3
+MindMat Backend,com.project.demo.rest.game,StarsAssignmentController,116,0,14,0,30,0,10,0,3,0
+MindMat Backend,com.project.demo.rest.admin,AdminController,43,0,2,0,10,0,3,0,2,0

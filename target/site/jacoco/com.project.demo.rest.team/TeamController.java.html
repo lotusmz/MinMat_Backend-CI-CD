@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TeamController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MindMat Backend</a> &gt; <a href="index.source.html" class="el_package">com.project.demo.rest.team</a> &gt; <span class="el_source">TeamController.java</span></div><h1>TeamController.java</h1><pre class="source lang-java linenums">package com.project.demo.rest.team;
+
+import com.project.demo.logic.entity.rol.Role;
+import com.project.demo.logic.entity.rol.RoleEnum;
+import com.project.demo.logic.entity.team.Team;
+import com.project.demo.logic.entity.user.User;
+import com.project.demo.logic.entity.team.TeamRepository;
+import com.project.demo.logic.entity.user.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+
+@RestController
+@RequestMapping(&quot;teams&quot;)
+<span class="nc" id="L24">public class TeamController {</span>
+
+    @Autowired
+    private TeamRepository teamRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+
+    @PostMapping
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; createTeam(@RequestBody Team team, Authentication authentication) {
+<span class="nc" id="L36">        User currentUser = (User) authentication.getPrincipal();</span>
+<span class="nc" id="L37">        Map&lt;String, String&gt; response = new HashMap&lt;&gt;();</span>
+
+        // Si el usuario es ADMIN (docente), asignarlo automáticamente como Teacher Leader
+<span class="nc bnc" id="L40" title="All 2 branches missed.">        if (currentUser.getRole().getName() == RoleEnum.ADMIN) {</span>
+<span class="nc" id="L41">            team.setTeacherLeader(currentUser);</span>
+<span class="nc bnc" id="L42" title="All 2 branches missed.">        } else if (currentUser.getRole().getName() == RoleEnum.SUPER_ADMIN) {</span>
+            // Validar teacherLeader asignado
+<span class="nc bnc" id="L44" title="All 4 branches missed.">            if (team.getTeacherLeader() == null || team.getTeacherLeader().getId() == null) {</span>
+<span class="nc" id="L45">                response.put(&quot;error&quot;, &quot;El equipo debe tener un docente líder asignado.&quot;);</span>
+<span class="nc" id="L46">                return ResponseEntity.badRequest().body(response);</span>
+            }
+
+            // Buscar el docente líder
+<span class="nc" id="L50">            User teacherLeader = userRepository.findById(team.getTeacherLeader().getId()).orElse(null);</span>
+<span class="nc bnc" id="L51" title="All 2 branches missed.">            if (teacherLeader == null) {</span>
+<span class="nc" id="L52">                response.put(&quot;error&quot;, &quot;El docente líder no existe.&quot;);</span>
+<span class="nc" id="L53">                return ResponseEntity.badRequest().body(response);</span>
+            }
+
+<span class="nc" id="L56">            team.setTeacherLeader(teacherLeader);</span>
+<span class="nc" id="L57">        } else {</span>
+<span class="nc" id="L58">            return ResponseEntity.status(403).body(Map.of(&quot;error&quot;, &quot;No tienes permisos para crear equipos.&quot;));</span>
+        }
+
+        // Guardar el equipo
+<span class="nc" id="L62">        teamRepository.save(team);</span>
+
+<span class="nc" id="L64">        response.put(&quot;message&quot;, &quot;Equipo creado exitosamente.&quot;);</span>
+<span class="nc" id="L65">        return ResponseEntity.ok(response);</span>
+    }
+
+    @PutMapping(&quot;/{id}/addStudent&quot;)
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;String&gt; addStudentToTeam(@PathVariable Long id, @RequestBody User student, Authentication authentication) {
+<span class="nc" id="L71">        User user = (User) authentication.getPrincipal();</span>
+
+<span class="nc" id="L73">        Optional&lt;Team&gt; teamOptional = teamRepository.findById(id);</span>
+<span class="nc bnc" id="L74" title="All 2 branches missed.">        if (teamOptional.isPresent()) {</span>
+<span class="nc" id="L75">            Team team = teamOptional.get();</span>
+
+            // Verificar que el usuario que realiza la acción es el docente líder del equipo
+<span class="nc bnc" id="L78" title="All 2 branches missed.">            if (!team.getTeacherLeader().getId().equals(user.getId())) {</span>
+<span class="nc" id="L79">                return ResponseEntity.status(403).body(&quot;Error: Solo el docente líder puede gestionar el equipo.&quot;);</span>
+            }
+
+            // Asegurarse de que el estudiante existe antes de añadirlo
+<span class="nc" id="L83">            Optional&lt;User&gt; studentOptional = userRepository.findById(student.getId());</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">            if (studentOptional.isPresent()) {</span>
+<span class="nc" id="L85">                team.getStudents().add(studentOptional.get());</span>
+<span class="nc" id="L86">                teamRepository.save(team);</span>
+<span class="nc" id="L87">                return ResponseEntity.ok(&quot;Estudiante añadido al equipo.&quot;);</span>
+            } else {
+<span class="nc" id="L89">                return ResponseEntity.badRequest().body(&quot;Error: Estudiante no encontrado.&quot;);</span>
+            }
+        }
+<span class="nc" id="L92">        return ResponseEntity.notFound().build();</span>
+    }
+
+    @PutMapping(&quot;/{id}&quot;)
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;?&gt; updateTeam(@PathVariable Long id, @RequestBody Team updatedTeam) {
+<span class="nc" id="L98">        Optional&lt;Team&gt; existingTeamOptional = teamRepository.findById(id);</span>
+
+<span class="nc bnc" id="L100" title="All 2 branches missed.">        if (existingTeamOptional.isPresent()) {</span>
+<span class="nc" id="L101">            Team existingTeam = existingTeamOptional.get();</span>
+
+
+
+<span class="nc" id="L105">            existingTeam.setName(updatedTeam.getName());</span>
+<span class="nc" id="L106">            existingTeam.setDescription(updatedTeam.getDescription());</span>
+<span class="nc" id="L107">            existingTeam.setAvatarId(updatedTeam.getAvatarId());</span>
+
+<span class="nc bnc" id="L109" title="All 4 branches missed.">            if (updatedTeam.getTeacherLeader() != null &amp;&amp; updatedTeam.getTeacherLeader().getId() != null) {</span>
+<span class="nc" id="L110">                Optional&lt;User&gt; teacherLeaderOptional = userRepository.findById(updatedTeam.getTeacherLeader().getId());</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">                if (teacherLeaderOptional.isPresent()) {</span>
+<span class="nc" id="L112">                    existingTeam.setTeacherLeader(teacherLeaderOptional.get());</span>
+                } else {
+<span class="nc" id="L114">                    return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, &quot;El docente líder no existe.&quot;));</span>
+                }
+            }
+
+<span class="nc" id="L118">            teamRepository.save(existingTeam);</span>
+<span class="nc" id="L119">            return ResponseEntity.ok(Map.of(&quot;message&quot;, &quot;Equipo actualizado correctamente.&quot;));</span>
+        } else {
+<span class="nc" id="L121">            return ResponseEntity.status(404).body(Map.of(&quot;error&quot;, &quot;Equipo no encontrado.&quot;));</span>
+        }
+    }
+
+    @PutMapping(&quot;/{id}/removeStudent&quot;)
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;String&gt; removeStudentFromTeam(@PathVariable Long id, @RequestBody User student, Authentication authentication) {
+<span class="nc" id="L128">        User user = (User) authentication.getPrincipal();</span>
+
+<span class="nc" id="L130">        Optional&lt;Team&gt; teamOptional = teamRepository.findById(id);</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">        if (teamOptional.isPresent()) {</span>
+<span class="nc" id="L132">            Team team = teamOptional.get();</span>
+
+            // Verificar que el usuario que realiza la acción es el docente líder del equipo
+<span class="nc bnc" id="L135" title="All 2 branches missed.">            if (!team.getTeacherLeader().getId().equals(user.getId())) {</span>
+<span class="nc" id="L136">                return ResponseEntity.status(403).body(&quot;Error: Solo el docente líder puede gestionar el equipo.&quot;);</span>
+            }
+
+            // Asegurarse de que el estudiante está en el equipo antes de eliminarlo
+<span class="nc bnc" id="L140" title="All 2 branches missed.">            if (team.getStudents().removeIf(s -&gt; s.getId().equals(student.getId()))) {</span>
+<span class="nc" id="L141">                teamRepository.save(team);</span>
+<span class="nc" id="L142">                return ResponseEntity.ok(&quot;Estudiante eliminado del equipo.&quot;);</span>
+            } else {
+<span class="nc" id="L144">                return ResponseEntity.badRequest().body(&quot;Error: El estudiante no pertenece al equipo.&quot;);</span>
+            }
+        }
+<span class="nc" id="L147">        return ResponseEntity.notFound().build();</span>
+    }
+
+    @GetMapping(&quot;/{id}&quot;)
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;?&gt; getTeamDetails(@PathVariable Long id) {
+<span class="nc" id="L153">        Optional&lt;Team&gt; teamOptional = teamRepository.findById(id);</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">        if (teamOptional.isPresent()) {</span>
+<span class="nc" id="L155">            Team team = teamOptional.get();</span>
+
+            // Construir la respuesta
+<span class="nc" id="L158">            Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L159">            response.put(&quot;name&quot;, team.getName());</span>
+<span class="nc" id="L160">            response.put(&quot;description&quot;, team.getDescription());</span>
+
+            // Devuelve el nombre completo del Teacher Leader
+<span class="nc" id="L163">            response.put(&quot;teacherLeader&quot;, Map.of(</span>
+<span class="nc" id="L164">                    &quot;id&quot;, team.getTeacherLeader().getId(),</span>
+<span class="nc" id="L165">                    &quot;name&quot;, team.getTeacherLeader().getName(),</span>
+<span class="nc" id="L166">                    &quot;lastname&quot;, team.getTeacherLeader().getLastname(),</span>
+<span class="nc" id="L167">                    &quot;email&quot;, team.getTeacherLeader().getEmail()</span>
+            ));
+
+<span class="nc" id="L170">            response.put(&quot;members&quot;, team.getStudents()</span>
+<span class="nc" id="L171">                    .stream()</span>
+<span class="nc" id="L172">                    .map(student -&gt; Map.of(</span>
+<span class="nc" id="L173">                            &quot;id&quot;, student.getId(),</span>
+<span class="nc" id="L174">                            &quot;name&quot;, student.getName(),</span>
+<span class="nc" id="L175">                            &quot;lastname&quot;, student.getLastname(),</span>
+<span class="nc" id="L176">                            &quot;email&quot;, student.getEmail()</span>
+                    ))
+<span class="nc" id="L178">                    .toList()</span>
+            );
+
+<span class="nc" id="L181">            return ResponseEntity.ok(response);</span>
+        }
+
+<span class="nc" id="L184">        return ResponseEntity.status(404).body(&quot;Equipo no encontrado.&quot;);</span>
+    }
+
+    @GetMapping(&quot;/{id}/students&quot;)
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;?&gt; getStudentsByTeam(@PathVariable Long id) {
+<span class="nc" id="L190">        Optional&lt;Team&gt; teamOptional = teamRepository.findById(id);</span>
+<span class="nc bnc" id="L191" title="All 2 branches missed.">        if (teamOptional.isPresent()) {</span>
+<span class="nc" id="L192">            Team team = teamOptional.get();</span>
+
+            // Crear una lista de nombres completos de los estudiantes
+<span class="nc" id="L195">            List&lt;String&gt; studentNames = team.getStudents()</span>
+<span class="nc" id="L196">                    .stream()</span>
+<span class="nc" id="L197">                    .map(student -&gt; student.getName() + &quot; &quot; + student.getLastname())</span>
+<span class="nc" id="L198">                    .toList();</span>
+
+<span class="nc" id="L200">            return ResponseEntity.ok(studentNames);</span>
+        }
+
+<span class="nc" id="L203">        return ResponseEntity.status(404).body(&quot;Equipo no encontrado.&quot;);</span>
+    }
+
+    @GetMapping(&quot;/byTeacher&quot;)
+    @PreAuthorize(&quot;isAuthenticated()&quot;)
+    public ResponseEntity&lt;?&gt; getTeamsByTeacher(Authentication authentication) {
+<span class="nc" id="L209">        User currentUser = (User) authentication.getPrincipal();</span>
+
+        // Superadmin ve todos los equipos
+<span class="nc bnc" id="L212" title="All 2 branches missed.">        if (currentUser.getRole().getName() == RoleEnum.SUPER_ADMIN) {</span>
+<span class="nc" id="L213">            List&lt;Team&gt; allTeams = teamRepository.findAll();</span>
+<span class="nc" id="L214">            return ResponseEntity.ok(allTeams.stream().map(team -&gt; Map.of(</span>
+<span class="nc" id="L215">                    &quot;id&quot;, team.getId(),</span>
+<span class="nc" id="L216">                    &quot;name&quot;, team.getName(),</span>
+<span class="nc" id="L217">                    &quot;description&quot;, team.getDescription(),</span>
+<span class="nc" id="L218">                    &quot;avatarId&quot;, team.getAvatarId(),</span>
+<span class="nc" id="L219">                    &quot;teacherLeader&quot;, Map.of(</span>
+<span class="nc" id="L220">                            &quot;name&quot;, team.getTeacherLeader().getName(),</span>
+<span class="nc" id="L221">                            &quot;lastname&quot;, team.getTeacherLeader().getLastname()</span>
+                    )
+<span class="nc" id="L223">            )).toList());</span>
+        }
+
+        // Docente (role: ADMIN) solo ve sus propios equipos
+<span class="nc bnc" id="L227" title="All 2 branches missed.">        if (currentUser.getRole().getName() == RoleEnum.ADMIN) {</span>
+<span class="nc" id="L228">            List&lt;Team&gt; teams = teamRepository.findByTeacherLeader_Id(currentUser.getId());</span>
+<span class="nc bnc" id="L229" title="All 2 branches missed.">            if (teams.isEmpty()) {</span>
+<span class="nc" id="L230">                return ResponseEntity.status(404).body(&quot;No se encontraron equipos para este docente.&quot;);</span>
+            }
+<span class="nc" id="L232">            return ResponseEntity.ok(teams.stream().map(team -&gt; Map.of(</span>
+<span class="nc" id="L233">                    &quot;id&quot;, team.getId(),</span>
+<span class="nc" id="L234">                    &quot;name&quot;, team.getName(),</span>
+<span class="nc" id="L235">                    &quot;description&quot;, team.getDescription(),</span>
+<span class="nc" id="L236">                    &quot;avatarId&quot;, team.getAvatarId(),</span>
+<span class="nc" id="L237">                    &quot;teacherLeader&quot;, Map.of(</span>
+<span class="nc" id="L238">                            &quot;name&quot;, team.getTeacherLeader().getName(),</span>
+<span class="nc" id="L239">                            &quot;lastname&quot;, team.getTeacherLeader().getLastname()</span>
+                    )
+<span class="nc" id="L241">            )).toList());</span>
+        }
+
+<span class="nc" id="L244">        return ResponseEntity.status(403).body(&quot;No tienes permisos para acceder a esta información.&quot;);</span>
+    }
+
+
+    @GetMapping(&quot;/countByTeacher/{teacherId}&quot;)
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;?&gt; countTeamsByTeacherLeader(@PathVariable Long teacherId) {
+        // Buscar equipos por ID del líder docente
+<span class="nc" id="L252">        long teamCount = teamRepository.countByTeacherLeader_Id(teacherId);</span>
+
+<span class="nc bnc" id="L254" title="All 2 branches missed.">        if (teamCount == 0) {</span>
+<span class="nc" id="L255">            return ResponseEntity.status(404).body(&quot;No se encontraron equipos para este docente líder.&quot;);</span>
+        }
+
+        // Retornar el número de equipos
+<span class="nc" id="L259">        return ResponseEntity.ok(Map.of(&quot;teacherId&quot;, teacherId, &quot;teamCount&quot;, teamCount));</span>
+    }
+
+
+    @GetMapping
+    @PreAuthorize(&quot;isAuthenticated()&quot;)
+    public ResponseEntity&lt;?&gt; getAllTeams(Authentication authentication) {
+<span class="nc" id="L266">        User currentUser = (User) authentication.getPrincipal();</span>
+
+        List&lt;Map&lt;String, Object&gt;&gt; response;
+
+<span class="nc bnc" id="L270" title="All 4 branches missed.">        if (currentUser.getRole().getName() == RoleEnum.ADMIN || currentUser.getRole().getName() == RoleEnum.SUPER_ADMIN) {</span>
+<span class="nc" id="L271">            List&lt;Team&gt; allTeams = teamRepository.findAll();</span>
+
+<span class="nc" id="L273">            response = allTeams.stream()</span>
+<span class="nc" id="L274">                    .map(team -&gt; Map.of(</span>
+<span class="nc" id="L275">                            &quot;id&quot;, team.getId(),</span>
+<span class="nc" id="L276">                            &quot;name&quot;, team.getName(),</span>
+<span class="nc" id="L277">                            &quot;description&quot;, team.getDescription(),</span>
+<span class="nc bnc" id="L278" title="All 2 branches missed.">                            &quot;avatarId&quot;, team.getAvatarId() != null ? team.getAvatarId() : 0,</span>
+<span class="nc bnc" id="L279" title="All 2 branches missed.">                            &quot;teacherLeader&quot;, team.getTeacherLeader() != null ? Map.of(</span>
+<span class="nc" id="L280">                                    &quot;id&quot;, team.getTeacherLeader().getId(),</span>
+<span class="nc" id="L281">                                    &quot;name&quot;, team.getTeacherLeader().getName(),</span>
+<span class="nc" id="L282">                                    &quot;lastname&quot;, team.getTeacherLeader().getLastname()</span>
+<span class="nc" id="L283">                            ) : null</span>
+                    ))
+<span class="nc" id="L285">                    .toList();</span>
+<span class="nc" id="L286">        } else {</span>
+<span class="nc" id="L287">            List&lt;Team&gt; userTeams = teamRepository.findByTeacherLeader_Id(currentUser.getId());</span>
+
+<span class="nc bnc" id="L289" title="All 2 branches missed.">            if (userTeams.isEmpty()) {</span>
+<span class="nc" id="L290">                return ResponseEntity.status(404).body(&quot;No se encontraron equipos.&quot;);</span>
+            }
+
+<span class="nc" id="L293">            response = userTeams.stream()</span>
+<span class="nc" id="L294">                    .map(team -&gt; Map.of(</span>
+<span class="nc" id="L295">                            &quot;id&quot;, team.getId(),</span>
+<span class="nc" id="L296">                            &quot;name&quot;, team.getName(),</span>
+<span class="nc" id="L297">                            &quot;description&quot;, team.getDescription(),</span>
+<span class="nc bnc" id="L298" title="All 2 branches missed.">                            &quot;avatarId&quot;, team.getAvatarId() != null ? team.getAvatarId() : 0,</span>
+<span class="nc" id="L299">                            &quot;teacherLeader&quot;, Map.of(</span>
+<span class="nc" id="L300">                                    &quot;id&quot;, currentUser.getId(),</span>
+<span class="nc" id="L301">                                    &quot;name&quot;, currentUser.getName(),</span>
+<span class="nc" id="L302">                                    &quot;lastname&quot;, currentUser.getLastname()</span>
+                            )
+                    ))
+<span class="nc" id="L305">                    .toList();</span>
+        }
+
+<span class="nc" id="L308">        return ResponseEntity.ok(response);</span>
+    }
+
+    @DeleteMapping(&quot;/{id}&quot;)
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;?&gt; deleteTeam(@PathVariable Long id, Authentication authentication) {
+<span class="nc" id="L314">        Optional&lt;Team&gt; teamOptional = teamRepository.findById(id);</span>
+
+<span class="nc bnc" id="L316" title="All 2 branches missed.">        if (teamOptional.isPresent()) {</span>
+<span class="nc" id="L317">            Team team = teamOptional.get();</span>
+<span class="nc" id="L318">            User currentUser = (User) authentication.getPrincipal();</span>
+
+            // Verificar permisos para eliminar el equipo
+<span class="nc bnc" id="L321" title="All 2 branches missed.">            if (currentUser.getRole().getName() == RoleEnum.ADMIN &amp;&amp;</span>
+<span class="nc bnc" id="L322" title="All 2 branches missed.">                    !team.getTeacherLeader().getId().equals(currentUser.getId())) {</span>
+<span class="nc" id="L323">                return ResponseEntity.status(403).body(&quot;No tienes permiso para eliminar este equipo.&quot;);</span>
+            }
+
+<span class="nc" id="L326">            teamRepository.deleteById(id);</span>
+<span class="nc" id="L327">            return ResponseEntity.noContent().build(); // HTTP 204: No Content</span>
+        } else {
+<span class="nc" id="L329">            return ResponseEntity.status(404).body(&quot;Equipo no encontrado.&quot;);</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ScoreRestController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MindMat Backend</a> &gt; <a href="index.source.html" class="el_package">com.project.demo.rest.score</a> &gt; <span class="el_source">ScoreRestController.java</span></div><h1>ScoreRestController.java</h1><pre class="source lang-java linenums">package com.project.demo.rest.score;
+import com.project.demo.logic.entity.game.Game;
+import com.project.demo.logic.entity.game.GameRepository;
+import com.project.demo.logic.entity.score.Score;
+import com.project.demo.logic.entity.score.ScoreRepository;
+import com.project.demo.logic.entity.user.User;
+import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.HashSet;
+
+
+@Transactional
+@RestController
+@RequestMapping(&quot;/score&quot;)
+<span class="nc" id="L25">public class ScoreRestController {</span>
+    @Autowired
+    private ScoreRepository scoreRepository;
+    @Autowired
+    private GameRepository gameRepository;
+    @PostMapping
+    @PreAuthorize(&quot;hasAnyRole('USER','ADMIN', 'SUPER_ADMIN')&quot;)
+    public Score insertScore(@RequestBody Score newScore, Authentication authentication) {
+<span class="nc" id="L33">        User user = (User) authentication.getPrincipal();</span>
+<span class="nc" id="L34">        newScore.setUser(user);</span>
+
+<span class="nc" id="L36">        System.out.println(&quot;=== Datos enviados al procedimiento ===&quot;);</span>
+<span class="nc" id="L37">        System.out.println(&quot;Game ID: &quot; + newScore.getGame().getId());</span>
+<span class="nc" id="L38">        System.out.println(&quot;Obtained At: &quot; + newScore.getObtainedAt());</span>
+<span class="nc" id="L39">        System.out.println(&quot;Right Answers: &quot; + newScore.getRightAnswers());</span>
+<span class="nc" id="L40">        System.out.println(&quot;Time Taken: &quot; + newScore.getTimeTaken());</span>
+<span class="nc" id="L41">        System.out.println(&quot;User ID: &quot; + newScore.getUser().getId());</span>
+<span class="nc" id="L42">        System.out.println(&quot;Wrong Answers: &quot; + newScore.getWrongAnswers());</span>
+
+<span class="nc" id="L44">        newScore.getUser().setPassword(null);</span>
+<span class="nc" id="L45">        newScore.setStars(scoreRepository.insertScore(newScore.getGame().getId(), newScore.getObtainedAt(), newScore.getRightAnswers(), newScore.getTimeTaken(),newScore.getUser().getId(), newScore.getWrongAnswers()));</span>
+
+        /*int stars = scoreRepository.insertScore(
+                newScore.getGame().getId(),
+                newScore.getObtainedAt(),
+                newScore.getRightAnswers(),
+                newScore.getTimeTaken(),
+                newScore.getUser().getId(),
+                newScore.getWrongAnswers()
+        );*/
+
+        //System.out.println(&quot;Stars Calculadas: &quot; + stars);
+
+        // Crear respuesta
+        //Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();
+        //response.put(&quot;stars&quot;, stars);
+        //response.put(&quot;message&quot;, &quot;Score registrado exitosamente&quot;);
+
+<span class="nc" id="L63">        return newScore;</span>
+    }
+
+    @GetMapping(&quot;/achievements&quot;)
+    @PreAuthorize(&quot;hasAnyRole('USER','ADMIN', 'SUPER_ADMIN')&quot;)
+    public List&lt;Map&lt;String, Object&gt;&gt; getAchievements(Authentication authentication) {
+<span class="nc" id="L69">        User user = (User) authentication.getPrincipal();</span>
+<span class="nc" id="L70">        List&lt;Object[]&gt; scores = scoreRepository.findMaxStarsByUser(user.getId());</span>
+<span class="nc" id="L71">        List&lt;Game&gt; allGames = gameRepository.findAll();</span>
+
+<span class="nc bnc" id="L73" title="All 2 branches missed.">        if (scores.isEmpty()) {</span>
+<span class="nc" id="L74">            return new ArrayList&lt;&gt;(); // O devuelve un mensaje personalizado si es necesario</span>
+        }
+
+<span class="nc" id="L77">        List&lt;Map&lt;String, Object&gt;&gt; achievements = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L79">        Set&lt;Long&gt; playedGameIds = scores.stream()</span>
+<span class="nc" id="L80">                .map(score -&gt; (Long) score[0])</span>
+<span class="nc" id="L81">                .collect(Collectors.toSet());</span>
+
+<span class="nc bnc" id="L83" title="All 2 branches missed.">        for (Object[] score : scores) {</span>
+<span class="nc" id="L84">            Map&lt;String, Object&gt; achievement = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L85">            achievement.put(&quot;gameId&quot;, score[0]); // ID del juego</span>
+<span class="nc" id="L86">            achievement.put(&quot;gameName&quot;, score[1]); // Nombre del juego</span>
+<span class="nc" id="L87">            achievement.put(&quot;stars&quot;, score[2]); // Máxima cantidad de estrellas</span>
+<span class="nc" id="L88">            achievements.add(achievement);</span>
+<span class="nc" id="L89">        }</span>
+
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        for (Game game : allGames) {</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">            if (!playedGameIds.contains(game.getId())) {</span>
+<span class="nc" id="L93">                Map&lt;String, Object&gt; achievement = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L94">                achievement.put(&quot;gameId&quot;, game.getId()); // ID del juego</span>
+<span class="nc" id="L95">                achievement.put(&quot;gameName&quot;, game.getName()); // Nombre del juego</span>
+<span class="nc" id="L96">                achievement.put(&quot;stars&quot;, 0); // Sin estrellas</span>
+<span class="nc" id="L97">                achievements.add(achievement);</span>
+            }
+<span class="nc" id="L99">        }</span>
+
+<span class="nc" id="L101">        return achievements;</span>
+    }
+
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

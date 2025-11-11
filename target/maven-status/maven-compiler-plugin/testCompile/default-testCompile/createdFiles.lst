@@ -1,0 +1,3 @@
+com\project\demo\DemoApplicationTests.class
+com\project\demo\rest\game\GameRestControllerTest.class
+com\project\demo\rest\user\UserAchievementRestControllerTest.class

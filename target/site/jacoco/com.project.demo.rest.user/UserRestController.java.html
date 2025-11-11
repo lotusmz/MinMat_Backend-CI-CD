@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserRestController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MindMat Backend</a> &gt; <a href="index.source.html" class="el_package">com.project.demo.rest.user</a> &gt; <span class="el_source">UserRestController.java</span></div><h1>UserRestController.java</h1><pre class="source lang-java linenums">package com.project.demo.rest.user;
+
+import com.project.demo.logic.entity.http.GlobalResponseHandler;
+import com.project.demo.logic.entity.http.Meta;
+import com.project.demo.logic.entity.rol.Role;
+import com.project.demo.logic.entity.rol.RoleEnum;
+import com.project.demo.logic.entity.rol.RoleRepository;
+import com.project.demo.logic.entity.user.User;
+import com.project.demo.logic.entity.user.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Map;
+import java.util.List;
+import java.util.stream.Collectors;
+
+
+import java.util.Map;
+import java.util.Optional;
+
+@RestController
+@RequestMapping(&quot;/users&quot;)
+<span class="nc" id="L34">public class UserRestController {</span>
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private RoleRepository roleRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @GetMapping
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;?&gt; getAll(
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            HttpServletRequest request) {
+
+<span class="nc" id="L49">        Pageable pageable = PageRequest.of(page-1, size);</span>
+<span class="nc" id="L50">        Page&lt;User&gt; ordersPage = userRepository.findAll(pageable);</span>
+<span class="nc" id="L51">        Meta meta = new Meta(request.getMethod(), request.getRequestURL().toString());</span>
+<span class="nc" id="L52">        meta.setTotalPages(ordersPage.getTotalPages());</span>
+<span class="nc" id="L53">        meta.setTotalElements(ordersPage.getTotalElements());</span>
+<span class="nc" id="L54">        meta.setPageNumber(ordersPage.getNumber() + 1);</span>
+<span class="nc" id="L55">        meta.setPageSize(ordersPage.getSize());</span>
+
+<span class="nc" id="L57">        return new GlobalResponseHandler().handleResponse(&quot;Order retrieved successfully&quot;,</span>
+<span class="nc" id="L58">                ordersPage.getContent(), HttpStatus.OK, meta);</span>
+    }
+
+    @PostMapping
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN', 'USER')&quot;)
+    public User createUser(@RequestBody Map&lt;String, Object&gt; requestData) {
+        // Extraer y validar los datos del JSON
+<span class="nc" id="L65">        String roleName = (String) requestData.get(&quot;role&quot;);</span>
+<span class="nc bnc" id="L66" title="All 4 branches missed.">        if (roleName == null || roleName.isBlank()) {</span>
+<span class="nc" id="L67">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;El campo 'role' es obligatorio&quot;);</span>
+        }
+
+        RoleEnum roleEnum;
+        try {
+<span class="nc" id="L72">            roleEnum = RoleEnum.valueOf(roleName.toUpperCase());</span>
+<span class="nc" id="L73">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L74">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;Rol inválido: &quot; + roleName);</span>
+<span class="nc" id="L75">        }</span>
+
+<span class="nc" id="L77">        Optional&lt;Role&gt; optionalRole = roleRepository.findByName(roleEnum);</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">        if (optionalRole.isEmpty()) {</span>
+<span class="nc" id="L79">            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;El rol especificado no existe&quot;);</span>
+        }
+
+        // Crear el usuario basado en los datos del mapa
+<span class="nc" id="L83">        var user = new User();</span>
+<span class="nc" id="L84">        user.setName((String) requestData.get(&quot;name&quot;));</span>
+<span class="nc" id="L85">        user.setLastname((String) requestData.get(&quot;lastname&quot;));</span>
+<span class="nc" id="L86">        user.setEmail((String) requestData.get(&quot;email&quot;));</span>
+<span class="nc" id="L87">        user.setPassword(passwordEncoder.encode((String) requestData.get(&quot;password&quot;)));</span>
+<span class="nc" id="L88">        user.setRole(optionalRole.get());</span>
+
+        // Convertir valores numéricos explícitamente
+<span class="nc" id="L91">        user.setActive(Integer.valueOf(requestData.get(&quot;active&quot;).toString()));</span>
+<span class="nc" id="L92">        user.setAvatarId(Integer.valueOf(requestData.get(&quot;avatarId&quot;).toString()));</span>
+
+        // Guardar y devolver el usuario creado
+<span class="nc" id="L95">        return userRepository.save(user);</span>
+    }
+
+    @PutMapping(&quot;/{userId}&quot;)
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;?&gt; updateUser(@PathVariable Long userId, @RequestBody Map&lt;String, Object&gt; requestData, HttpServletRequest request) {
+<span class="nc" id="L101">        Optional&lt;User&gt; optionalUser = userRepository.findById(userId);</span>
+
+<span class="nc bnc" id="L103" title="All 2 branches missed.">        if (optionalUser.isPresent()) {</span>
+<span class="nc" id="L104">            User existingUser = optionalUser.get();</span>
+
+            // Actualizar campos según los valores del JSON
+<span class="nc bnc" id="L107" title="All 2 branches missed.">            if (requestData.containsKey(&quot;name&quot;)) {</span>
+<span class="nc" id="L108">                existingUser.setName((String) requestData.get(&quot;name&quot;));</span>
+            }
+<span class="nc bnc" id="L110" title="All 2 branches missed.">            if (requestData.containsKey(&quot;lastname&quot;)) {</span>
+<span class="nc" id="L111">                existingUser.setLastname((String) requestData.get(&quot;lastname&quot;));</span>
+            }
+<span class="nc bnc" id="L113" title="All 2 branches missed.">            if (requestData.containsKey(&quot;email&quot;)) {</span>
+<span class="nc" id="L114">                existingUser.setEmail((String) requestData.get(&quot;email&quot;));</span>
+            }
+<span class="nc bnc" id="L116" title="All 2 branches missed.">            if (requestData.containsKey(&quot;password&quot;)) {</span>
+<span class="nc" id="L117">                existingUser.setPassword(passwordEncoder.encode((String) requestData.get(&quot;password&quot;)));</span>
+            }
+<span class="nc bnc" id="L119" title="All 2 branches missed.">            if (requestData.containsKey(&quot;active&quot;)) {</span>
+<span class="nc" id="L120">                existingUser.setActive(Integer.valueOf(requestData.get(&quot;active&quot;).toString()));</span>
+            }
+<span class="nc bnc" id="L122" title="All 2 branches missed.">            if (requestData.containsKey(&quot;avatarId&quot;)) {</span>
+<span class="nc" id="L123">                existingUser.setAvatarId(Integer.valueOf(requestData.get(&quot;avatarId&quot;).toString()));</span>
+            }
+<span class="nc bnc" id="L125" title="All 2 branches missed.">            if (requestData.containsKey(&quot;role&quot;)) {</span>
+<span class="nc" id="L126">                String roleName = (String) requestData.get(&quot;role&quot;);</span>
+                try {
+<span class="nc" id="L128">                    RoleEnum roleEnum = RoleEnum.valueOf(roleName.toUpperCase());</span>
+<span class="nc" id="L129">                    Optional&lt;Role&gt; optionalRole = roleRepository.findByName(roleEnum);</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">                    if (optionalRole.isPresent()) {</span>
+<span class="nc" id="L131">                        existingUser.setRole(optionalRole.get());</span>
+                    } else {
+<span class="nc" id="L133">                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;El rol especificado no existe&quot;);</span>
+                    }
+<span class="nc" id="L135">                } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L136">                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, &quot;Rol inválido: &quot; + roleName);</span>
+<span class="nc" id="L137">                }</span>
+            }
+
+            // Guardar usuario actualizado
+<span class="nc" id="L141">            userRepository.save(existingUser);</span>
+
+<span class="nc" id="L143">            return new GlobalResponseHandler().handleResponse(</span>
+                    &quot;User updated successfully&quot;,
+                    existingUser,
+                    HttpStatus.OK,
+                    request
+            );
+        } else {
+<span class="nc" id="L150">            return new GlobalResponseHandler().handleResponse(</span>
+                    &quot;User id &quot; + userId + &quot; not found&quot;,
+                    HttpStatus.NOT_FOUND,
+                    request
+            );
+        }
+    }
+
+
+    @PatchMapping(&quot;/me&quot;)
+    @PreAuthorize(&quot;isAuthenticated()&quot;)
+    public ResponseEntity&lt;?&gt; updatePartialAuthenticatedUser(@RequestBody Map&lt;String, Object&gt; updates, HttpServletRequest request) {
+<span class="nc" id="L162">        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();</span>
+<span class="nc" id="L163">        User user = (User) authentication.getPrincipal();</span>
+
+<span class="nc" id="L165">        updates.forEach((key, value) -&gt; {</span>
+            try {
+<span class="nc bnc" id="L167" title="All 7 branches missed.">                switch (key) {</span>
+                    case &quot;name&quot;:
+<span class="nc" id="L169">                        user.setName((String) value);</span>
+<span class="nc" id="L170">                        break;</span>
+                    case &quot;lastname&quot;:
+<span class="nc" id="L172">                        user.setLastname((String) value);</span>
+<span class="nc" id="L173">                        break;</span>
+                    case &quot;email&quot;:
+<span class="nc" id="L175">                        user.setEmail((String) value);</span>
+<span class="nc" id="L176">                        break;</span>
+                    case &quot;password&quot;:
+<span class="nc bnc" id="L178" title="All 4 branches missed.">                        if (value != null &amp;&amp; !((String) value).isEmpty()) {</span>
+<span class="nc" id="L179">                            user.setPassword(passwordEncoder.encode((String) value));</span>
+                        }
+                        break;
+                    case &quot;active&quot;:
+<span class="nc" id="L183">                        user.setActive(Integer.parseInt(value.toString())); // Convierte a Integer si es necesario</span>
+<span class="nc" id="L184">                        break;</span>
+                    case &quot;avatarId&quot;:
+<span class="nc" id="L186">                        user.setAvatarId(Integer.parseInt(value.toString())); // Convierte a Integer si es necesario</span>
+                        break;
+                    // Añadir otros campos si es necesario
+                }
+<span class="nc" id="L190">            } catch (ClassCastException | NumberFormatException e) {</span>
+                // Maneja errores de conversión aquí
+<span class="nc" id="L192">                System.out.println(&quot;Error de conversión en el campo: &quot; + key + &quot; con valor: &quot; + value);</span>
+<span class="nc" id="L193">            }</span>
+<span class="nc" id="L194">        });</span>
+
+<span class="nc" id="L196">        userRepository.save(user);</span>
+<span class="nc" id="L197">        return new GlobalResponseHandler().handleResponse(&quot;User profile updated successfully&quot;, user, HttpStatus.OK, request);</span>
+    }
+
+
+
+    @DeleteMapping(&quot;/{userId}&quot;)
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;?&gt; deleteUser(@PathVariable Long userId, HttpServletRequest request) {
+<span class="nc" id="L205">        Optional&lt;User&gt; foundOrder = userRepository.findById(userId);</span>
+<span class="nc bnc" id="L206" title="All 2 branches missed.">        if(foundOrder.isPresent()) {</span>
+<span class="nc" id="L207">            userRepository.deleteById(userId);</span>
+<span class="nc" id="L208">            return new GlobalResponseHandler().handleResponse(&quot;User deleted successfully&quot;,</span>
+<span class="nc" id="L209">                    foundOrder.get(), HttpStatus.OK, request);</span>
+        } else {
+<span class="nc" id="L211">            return new GlobalResponseHandler().handleResponse(&quot;Order id &quot; + userId + &quot; not found&quot;  ,</span>
+                    HttpStatus.NOT_FOUND, request);
+        }
+    }
+
+    @GetMapping(&quot;/me&quot;)
+    @PreAuthorize(&quot;isAuthenticated()&quot;)
+    public User authenticatedUser() {
+<span class="nc" id="L219">        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();</span>
+<span class="nc" id="L220">        return (User) authentication.getPrincipal();</span>
+    }
+
+    @PutMapping(&quot;/{userId}/active&quot;)
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;?&gt; updateActiveStatus(
+            @PathVariable Long userId,
+            @RequestBody Map&lt;String, Integer&gt; requestBody,
+            HttpServletRequest request) {
+        // Buscar al usuario por ID
+<span class="nc" id="L230">        Optional&lt;User&gt; optionalUser = userRepository.findById(userId);</span>
+
+<span class="nc bnc" id="L232" title="All 2 branches missed.">        if (optionalUser.isPresent()) {</span>
+<span class="nc" id="L233">            User user = optionalUser.get();</span>
+
+            // Obtener el nuevo valor de &quot;active&quot; del request
+<span class="nc" id="L236">            Integer newActiveStatus = requestBody.get(&quot;active&quot;);</span>
+<span class="nc bnc" id="L237" title="All 2 branches missed.">            if (newActiveStatus == null) {</span>
+<span class="nc" id="L238">                return new GlobalResponseHandler().handleResponse(</span>
+                        &quot;Field 'active' is required&quot;, HttpStatus.BAD_REQUEST, request);
+            }
+
+            // Actualizar el valor de active
+<span class="nc" id="L243">            user.setActive(newActiveStatus);</span>
+<span class="nc" id="L244">            userRepository.save(user);</span>
+
+<span class="nc" id="L246">            return new GlobalResponseHandler().handleResponse(</span>
+                    &quot;User active status updated successfully&quot;, user, HttpStatus.OK, request);
+        } else {
+<span class="nc" id="L249">            return new GlobalResponseHandler().handleResponse(</span>
+                    &quot;User id &quot; + userId + &quot; not found&quot;, HttpStatus.NOT_FOUND, request);
+        }
+    }
+
+    @GetMapping(&quot;/current&quot;)
+    @PreAuthorize(&quot;isAuthenticated()&quot;)
+    public ResponseEntity&lt;?&gt; getCurrentUser(Authentication authentication) {
+<span class="nc" id="L257">        User user = (User) authentication.getPrincipal();</span>
+<span class="nc" id="L258">        return ResponseEntity.ok(Map.of(</span>
+<span class="nc" id="L259">                &quot;id&quot;, user.getId(),</span>
+<span class="nc" id="L260">                &quot;name&quot;, user.getName(),</span>
+<span class="nc" id="L261">                &quot;role&quot;, user.getRole().getName()</span>
+        ));
+    }
+
+    @GetMapping(&quot;/teachers&quot;)
+    public ResponseEntity&lt;?&gt; getAllTeachers() {
+<span class="nc" id="L267">        List&lt;User&gt; teachers = userRepository.findAll().stream()</span>
+<span class="nc bnc" id="L268" title="All 2 branches missed.">                .filter(user -&gt; user.getRole().getName() == RoleEnum.ADMIN) // Comparar con RoleEnum.ADMIN</span>
+<span class="nc" id="L269">                .collect(Collectors.toList());</span>
+<span class="nc" id="L270">        return ResponseEntity.ok(teachers);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

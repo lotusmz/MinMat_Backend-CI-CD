@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CategoryRestController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MindMat Backend</a> &gt; <a href="index.source.html" class="el_package">com.project.demo.rest.category</a> &gt; <span class="el_source">CategoryRestController.java</span></div><h1>CategoryRestController.java</h1><pre class="source lang-java linenums">package com.project.demo.rest.category;
+
+import com.project.demo.logic.entity.category.Category;
+import com.project.demo.logic.entity.category.CategoryRepository;
+import com.project.demo.logic.entity.http.GlobalResponseHandler;
+import com.project.demo.logic.entity.http.Meta;
+import com.project.demo.logic.entity.user.User;
+import com.project.demo.logic.entity.user.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping(&quot;/categories&quot;)
+// Todas las rutas de este controller harán solicitud a /categories
+<span class="nc" id="L25">public class CategoryRestController {</span>
+
+    @Autowired
+    private CategoryRepository categoryRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    // Aquí se presentaron muchos problemas porque utilicé CrudRepository en lugar de JpaRepository
+    // Fue corregido
+    @GetMapping
+    @PreAuthorize(&quot;isAuthenticated()&quot;)
+    public ResponseEntity&lt;?&gt; getAll(
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            HttpServletRequest request) {
+
+<span class="nc" id="L42">            Pageable pageable = PageRequest.of(page-1, size);</span>
+<span class="nc" id="L43">            Page&lt;Category&gt; categoriesPage = categoryRepository.findAll(pageable);</span>
+<span class="nc" id="L44">            Meta meta = new Meta(request.getMethod(), request.getRequestURL().toString());</span>
+<span class="nc" id="L45">            meta.setTotalPages(categoriesPage.getTotalPages());</span>
+<span class="nc" id="L46">            meta.setTotalElements(categoriesPage.getTotalElements());</span>
+<span class="nc" id="L47">            meta.setPageNumber(categoriesPage.getNumber() + 1);</span>
+<span class="nc" id="L48">            meta.setPageSize(categoriesPage.getSize());</span>
+
+<span class="nc" id="L50">            return new GlobalResponseHandler().handleResponse(&quot;Category retrieved successfully&quot;,</span>
+<span class="nc" id="L51">                    categoriesPage.getContent(), HttpStatus.OK, meta);</span>
+    }
+
+    @PostMapping
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;?&gt; addCategory(@RequestBody Category category, HttpServletRequest request) {
+<span class="nc" id="L57">        System.out.println(&quot;Categoría recibida: &quot; + category.getName() + &quot; - &quot; + category.getDescription());</span>
+<span class="nc" id="L58">        categoryRepository.save(category);</span>
+<span class="nc" id="L59">        return new GlobalResponseHandler().handleResponse(&quot;Category created successfully&quot;,</span>
+                category, HttpStatus.CREATED, request);
+    }
+
+    @GetMapping(&quot;/{id}&quot;)
+    public Category getCategoryById(@PathVariable Long id) {
+<span class="nc" id="L65">        return categoryRepository.findById(id)</span>
+<span class="nc" id="L66">                .orElseThrow(() -&gt; new RuntimeException(&quot;Category not found&quot;));</span>
+    }
+
+    @PutMapping(&quot;/{id}&quot;)
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;?&gt; updateCategory(@PathVariable Long id, @RequestBody Category category, HttpServletRequest request) {
+<span class="nc" id="L72">        Optional&lt;Category&gt; foundCategory = categoryRepository.findById(id);</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">        if(foundCategory.isPresent()) {</span>
+<span class="nc" id="L74">            category.setId(foundCategory.get().getId());</span>
+            //category.setUser(foundCategory.get().getUser());
+<span class="nc" id="L76">            categoryRepository.save(category);</span>
+<span class="nc" id="L77">            return new GlobalResponseHandler().handleResponse(&quot;Category updated successfully&quot;,</span>
+                    category, HttpStatus.OK, request);
+        } else {
+<span class="nc" id="L80">            return new GlobalResponseHandler().handleResponse(&quot;Category id &quot; + id + &quot; not found&quot;  ,</span>
+                    HttpStatus.NOT_FOUND, request);
+        }
+    }
+
+    @PatchMapping(&quot;/{categoryId}&quot;)
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;?&gt; patchCategory(@PathVariable Long categoryId, @RequestBody Category category, HttpServletRequest request) {
+<span class="nc" id="L88">        Optional&lt;Category&gt; foundCategory = categoryRepository.findById(categoryId);</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">        if(foundCategory.isPresent()) {</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">            if(category.getName() != null) foundCategory.get().setName(category.getName());</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">            if(category.getDescription() != null) foundCategory.get().setDescription(category.getDescription());</span>
+<span class="nc" id="L92">            categoryRepository.save(foundCategory.get());</span>
+<span class="nc" id="L93">            return new GlobalResponseHandler().handleResponse(&quot;Category updated successfully&quot;,</span>
+<span class="nc" id="L94">                    foundCategory.get(), HttpStatus.OK, request);</span>
+        } else {
+<span class="nc" id="L96">            return new GlobalResponseHandler().handleResponse(&quot;Category id &quot; + categoryId + &quot; not found&quot;  ,</span>
+                    HttpStatus.NOT_FOUND, request);
+        }
+    }
+
+    @DeleteMapping(&quot;/{id}&quot;)
+    @PreAuthorize(&quot;hasAnyRole('ADMIN', 'SUPER_ADMIN')&quot;)
+    public ResponseEntity&lt;?&gt; deleteCategory(@PathVariable Long id, HttpServletRequest request) {
+<span class="nc" id="L104">        Optional&lt;Category&gt; foundCategory = categoryRepository.findById(id);</span>
+<span class="nc bnc" id="L105" title="All 2 branches missed.">        if(foundCategory.isPresent()) {</span>
+<span class="nc" id="L106">            categoryRepository.deleteById(foundCategory.get().getId());</span>
+<span class="nc" id="L107">            return new GlobalResponseHandler().handleResponse(&quot;Category deleted successfully&quot;,</span>
+<span class="nc" id="L108">                    foundCategory.get(), HttpStatus.OK, request);</span>
+        } else {
+<span class="nc" id="L110">            return new GlobalResponseHandler().handleResponse(&quot;Category id &quot; + id + &quot; not found&quot;  ,</span>
+                    HttpStatus.NOT_FOUND, request);
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

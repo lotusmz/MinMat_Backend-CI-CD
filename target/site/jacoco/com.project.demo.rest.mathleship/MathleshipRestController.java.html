@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MathleshipRestController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MindMat Backend</a> &gt; <a href="index.source.html" class="el_package">com.project.demo.rest.mathleship</a> &gt; <span class="el_source">MathleshipRestController.java</span></div><h1>MathleshipRestController.java</h1><pre class="source lang-java linenums">package com.project.demo.rest.mathleship;
+
+import com.project.demo.logic.entity.mathleship.*;
+import com.project.demo.logic.entity.http.GlobalResponseHandler;
+import com.project.demo.logic.entity.http.Meta;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
+
+@RestController
+@RequestMapping(&quot;/api/mathleship&quot;)
+<span class="nc" id="L22">public class MathleshipRestController {</span>
+
+    @Autowired
+    private MathleshipRepository mathleshipRepository;
+
+    @Autowired
+    private ShipRepository shipRepository;
+
+    @Autowired
+    private GridCellRepository gridCellRepository;
+
+
+
+<span class="nc" id="L35">    private final int BOARD_SIZE = 6;</span>
+<span class="nc" id="L36">    private final List&lt;Integer&gt; SHIP_SIZES = List.of(4, 3, 2, 1);</span>
+<span class="nc" id="L37">    private final Random random = new Random();</span>
+<span class="nc" id="L38">    private final char[] COLUMNS = {'A', 'B', 'C', 'D', 'E', 'F'};</span>
+
+    @GetMapping(&quot;/initialize&quot;)
+    public List&lt;Ship&gt; initializeBoard() {
+<span class="nc" id="L42">        shipRepository.deleteAll();</span>
+<span class="nc" id="L43">        gridCellRepository.deleteAll();</span>
+
+<span class="nc" id="L45">        List&lt;Ship&gt; ships = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L46">        boolean[][] board = new boolean[BOARD_SIZE][BOARD_SIZE];</span>
+
+<span class="nc bnc" id="L48" title="All 2 branches missed.">        for (int size : SHIP_SIZES) {</span>
+<span class="nc" id="L49">            Ship ship = new Ship();</span>
+<span class="nc" id="L50">            ship.setSize(size);</span>
+<span class="nc" id="L51">            ship.setHitCount(0);</span>
+<span class="nc" id="L52">            shipRepository.save(ship); // Guarda el ship primero</span>
+
+<span class="nc" id="L54">            boolean placed = false;</span>
+
+            // Intentar colocar el barco hasta que se encuentre una posición válida
+<span class="nc bnc" id="L57" title="All 2 branches missed.">            while (!placed) {</span>
+<span class="nc" id="L58">                boolean horizontal = random.nextBoolean();</span>
+<span class="nc" id="L59">                GridCell startPosition = getRandomStartPosition(size, horizontal);</span>
+
+                try {
+<span class="nc bnc" id="L62" title="All 2 branches missed.">                    if (canPlaceShip(board, startPosition, size, horizontal)) {</span>
+<span class="nc" id="L63">                        List&lt;GridCell&gt; cells = placeShipOnBoard(board, startPosition, size, horizontal);</span>
+
+                        // Asocia cada celda con el barco y guárdala
+<span class="nc" id="L66">                        cells.forEach(cell -&gt; {</span>
+<span class="nc" id="L67">                            cell.setShip(ship); // Asigna el barco a la celda</span>
+<span class="nc" id="L68">                            gridCellRepository.save(cell); // Guarda cada celda en la base de datos</span>
+<span class="nc" id="L69">                            ship.getCellsOccupied().add(cell); // Agrega la celda a la lista de celdas ocupadas del barco</span>
+<span class="nc" id="L70">                        });</span>
+
+<span class="nc" id="L72">                        shipRepository.save(ship); // Guarda el barco actualizado con sus celdas ocupadas</span>
+<span class="nc" id="L73">                        ships.add(ship);</span>
+<span class="nc" id="L74">                        placed = true; // Marca como colocado para salir del bucle</span>
+                    }
+<span class="nc" id="L76">                } catch (IllegalStateException e) {</span>
+                    // Si la posición está ocupada, ignora la excepción y reintenta con una nueva posición
+<span class="nc" id="L78">                    System.out.println(&quot;Posición ocupada, reintentando...&quot;);</span>
+<span class="nc" id="L79">                }</span>
+<span class="nc" id="L80">            }</span>
+<span class="nc" id="L81">        }</span>
+<span class="nc" id="L82">        return ships;</span>
+    }
+
+    private GridCell getRandomStartPosition(int size, boolean horizontal) {
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        int row = random.nextInt(horizontal ? BOARD_SIZE : BOARD_SIZE - size + 1);</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">        int col = random.nextInt(horizontal ? BOARD_SIZE - size + 1 : BOARD_SIZE);</span>
+<span class="nc" id="L88">        return new GridCell(row + 1, COLUMNS[col], 1, 0); // Ajusta para que comience en 1</span>
+    }
+
+
+    private boolean canPlaceShip(boolean[][] board, GridCell start, int size, boolean horizontal) {
+<span class="nc bnc" id="L93" title="All 2 branches missed.">        for (int i = 0; i &lt; size; i++) {</span>
+<span class="nc" id="L94">            int row = start.getRow();</span>
+<span class="nc" id="L95">            int colIndex = getColumnIndex(start.getColumn());</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">            if (horizontal) {</span>
+<span class="nc" id="L97">                colIndex += i;</span>
+            } else {
+<span class="nc" id="L99">                row += i;</span>
+            }
+<span class="nc bnc" id="L101" title="All 6 branches missed.">            if (row &gt;= BOARD_SIZE || colIndex &gt;= BOARD_SIZE || board[row][colIndex]) {</span>
+<span class="nc" id="L102">                return false;</span>
+            }
+        }
+<span class="nc" id="L105">        return true;</span>
+    }
+
+    private int getColumnIndex(char column) {
+<span class="nc" id="L109">        return column - 'A';</span>
+    }
+
+    private List&lt;GridCell&gt; placeShipOnBoard(boolean[][] board, GridCell start, int size, boolean horizontal) {
+<span class="nc" id="L113">        List&lt;GridCell&gt; cells = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">        for (int i = 0; i &lt; size; i++) {</span>
+<span class="nc" id="L115">            int row = start.getRow() - 1; // Ajuste para que comience en 0</span>
+<span class="nc" id="L116">            int colIndex = getColumnIndex(start.getColumn());</span>
+<span class="nc bnc" id="L117" title="All 2 branches missed.">            if (horizontal) {</span>
+<span class="nc" id="L118">                colIndex += i;</span>
+            } else {
+<span class="nc" id="L120">                row += i;</span>
+            }
+
+            // Verificación para evitar la superposición
+<span class="nc bnc" id="L124" title="All 2 branches missed.">            if (board[row][colIndex]) {</span>
+<span class="nc" id="L125">                throw new IllegalStateException(&quot;La casilla (&quot; + (row + 1) + &quot;, &quot; + COLUMNS[colIndex] + &quot;) ya está ocupada por otro barco.&quot;);</span>
+            }
+
+            // Marca la casilla como ocupada
+<span class="nc" id="L129">            board[row][colIndex] = true;</span>
+
+<span class="nc" id="L131">            GridCell cell = new GridCell();</span>
+<span class="nc" id="L132">            cell.setRow(row + 1); // Ajuste para el frontend</span>
+<span class="nc" id="L133">            cell.setColumn(COLUMNS[colIndex]);</span>
+<span class="nc" id="L134">            cell.setHasShip(1);</span>
+<span class="nc" id="L135">            cell.setIsHit(0);</span>
+
+<span class="nc" id="L137">            cells.add(cell);</span>
+        }
+<span class="nc" id="L139">        return cells;</span>
+    }
+
+    @PostMapping(&quot;/attack&quot;)
+    public ResponseEntity&lt;?&gt; attackCell(@RequestBody AttackRequest attackRequest, HttpServletRequest request) {
+<span class="nc" id="L144">        int row = attackRequest.getRow();</span>
+<span class="nc" id="L145">        char column = attackRequest.getColumn();</span>
+
+<span class="nc" id="L147">        boolean isHit = checkHit(row, column);</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">        String message = isHit ? &quot;Hit!&quot; : &quot;Miss!&quot;;</span>
+
+<span class="nc" id="L150">        return new ResponseEntity&lt;&gt;(Map.of(</span>
+                &quot;message&quot;, message,
+<span class="nc" id="L152">                &quot;isHit&quot;, isHit</span>
+        ), HttpStatus.OK);
+    }
+
+    private boolean checkHit(int row, char column) {
+<span class="nc" id="L157">        System.out.println(&quot;Checking hit for row: &quot; + row + &quot; and column: &quot; + column);</span>
+
+<span class="nc bnc" id="L159" title="All 2 branches missed.">        for (Ship ship : shipRepository.findAll()) {</span>
+<span class="nc" id="L160">            System.out.println(&quot;Checking ship with ID: &quot; + ship.getId());</span>
+<span class="nc bnc" id="L161" title="All 2 branches missed.">            for (GridCell cell : ship.getCellsOccupied()) {</span>
+<span class="nc" id="L162">                System.out.println(&quot;Checking against cell - Row: &quot; + cell.getRow() + &quot;, Column: &quot; + cell.getColumn());</span>
+                // Asegúrate de que los valores de row y column están alineados.
+<span class="nc bnc" id="L164" title="All 4 branches missed.">                if (cell.getRow() == row &amp;&amp; cell.getColumn() == column) {</span>
+<span class="nc" id="L165">                    System.out.println(&quot;Hit detected at row: &quot; + row + &quot; and column: &quot; + column);</span>
+<span class="nc" id="L166">                    return true;</span>
+                }
+<span class="nc" id="L168">            }</span>
+<span class="nc" id="L169">        }</span>
+
+<span class="nc" id="L171">        System.out.println(&quot;Miss detected!&quot;);</span>
+<span class="nc" id="L172">        return false;</span>
+    }
+
+    // Clase interna para representar la solicitud de ataque
+    private static class AttackRequest {
+        private int row;
+        private char column;
+
+<span class="nc" id="L180">        public int getRow() { return row; }</span>
+<span class="nc" id="L181">        public void setRow(int row) { this.row = row; }</span>
+
+<span class="nc" id="L183">        public char getColumn() { return column; }</span>
+<span class="nc" id="L184">        public void setColumn(char column) { this.column = column; }</span>
+    }
+
+    @PostMapping(&quot;/reset&quot;)
+    public ResponseEntity&lt;String&gt; resetGame() {
+<span class="nc" id="L189">        shipRepository.deleteAll();  // Eliminar todos los barcos</span>
+<span class="nc" id="L190">        gridCellRepository.deleteAll();  // Eliminar todas las celdas del tablero</span>
+
+<span class="nc" id="L192">        initializeBoard();  // Inicializar el tablero de nuevo</span>
+
+<span class="nc" id="L194">        return ResponseEntity.ok(&quot;Game reset successfully.&quot;);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

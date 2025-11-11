@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserAchievementRestController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MindMat Backend</a> &gt; <a href="index.source.html" class="el_package">com.project.demo.rest.user</a> &gt; <span class="el_source">UserAchievementRestController.java</span></div><h1>UserAchievementRestController.java</h1><pre class="source lang-java linenums">package com.project.demo.rest.user;
+
+import com.project.demo.logic.entity.achievement.Achievement;
+import com.project.demo.logic.entity.achievement.AchievementRepository;
+import com.project.demo.logic.entity.http.GlobalResponseHandler;
+import com.project.demo.logic.entity.http.Meta;
+import com.project.demo.logic.entity.user.User;
+import com.project.demo.logic.entity.user.UserRepository;
+import com.project.demo.logic.entity.user_achievement.UserAchievement;
+import com.project.demo.logic.entity.user_achievement.UserAchievementRepository;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping(&quot;/achievements&quot;)
+<span class="fc" id="L26">public class UserAchievementRestController {</span>
+    @Autowired
+    private UserAchievementRepository userAchievementRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private AchievementRepository achievementRepository;
+
+    @GetMapping
+    @PreAuthorize(&quot;isAuthenticated()&quot;)
+    public ResponseEntity&lt;?&gt; getAll(
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            HttpServletRequest request) {
+
+<span class="fc" id="L43">        Pageable pageable = PageRequest.of(page - 1, size);</span>
+<span class="fc" id="L44">        Page&lt;Achievement&gt; achievementsPage = achievementRepository.findAll(pageable);</span>
+
+<span class="fc" id="L46">        Meta meta = new Meta(request.getMethod(), request.getRequestURL().toString());</span>
+<span class="fc" id="L47">        meta.setTotalPages(achievementsPage.getTotalPages());</span>
+<span class="fc" id="L48">        meta.setTotalElements(achievementsPage.getTotalElements());</span>
+<span class="fc" id="L49">        meta.setPageNumber(achievementsPage.getNumber() + 1);</span>
+<span class="fc" id="L50">        meta.setPageSize(achievementsPage.getSize());</span>
+
+<span class="fc" id="L52">        return new GlobalResponseHandler().handleResponse(</span>
+                &quot;Achievements retrieved successfully&quot;,
+<span class="fc" id="L54">                achievementsPage.getContent(),</span>
+                HttpStatus.OK,
+                meta
+        );
+    }
+
+    @GetMapping(&quot;/{userId}&quot;)
+    @PreAuthorize(&quot;isAuthenticated()&quot;)
+    public ResponseEntity&lt;?&gt; getUserAchievementsByUserId(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = &quot;1&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            HttpServletRequest request) {
+
+        // Crear objeto Pageable para la paginación
+<span class="fc" id="L69">        Pageable pageable = PageRequest.of(page - 1, size);</span>
+
+        // Obtener la página de UserAchievement asociada al usuario
+<span class="fc" id="L72">        Page&lt;UserAchievement&gt; userAchievementsPage = userAchievementRepository.findByUserId(userId, pageable);</span>
+
+<span class="pc bpc" id="L74" title="1 of 2 branches missed.">        if (userAchievementsPage.isEmpty()) {</span>
+<span class="nc" id="L75">            return new GlobalResponseHandler().handleResponse(</span>
+                    &quot;No achievements found for the given user ID&quot;, HttpStatus.NOT_FOUND, request);
+        }
+
+        // Configuramos la metadata para la paginación
+<span class="fc" id="L80">        Meta meta = new Meta(request.getMethod(), request.getRequestURL().toString());</span>
+<span class="fc" id="L81">        meta.setTotalPages(userAchievementsPage.getTotalPages());</span>
+<span class="fc" id="L82">        meta.setTotalElements(userAchievementsPage.getTotalElements());</span>
+<span class="fc" id="L83">        meta.setPageNumber(userAchievementsPage.getNumber() + 1);</span>
+<span class="fc" id="L84">        meta.setPageSize(userAchievementsPage.getSize());</span>
+
+        // Retornar la respuesta con los datos y metadata
+<span class="fc" id="L87">        return new GlobalResponseHandler().handleResponse(</span>
+                &quot;User achievements retrieved successfully&quot;,
+<span class="fc" id="L89">                userAchievementsPage.getContent(),</span>
+                HttpStatus.OK,
+                meta
+        );
+    }
+
+
+    // Crear un nuevo logro para un usuario
+    @PostMapping(&quot;/{userId}&quot;)
+    public ResponseEntity&lt;?&gt; addAchievementToUser(
+            @PathVariable Long userId,
+            @RequestBody UserAchievement newAchievement,
+            HttpServletRequest request) {
+<span class="fc" id="L102">        Optional&lt;User&gt; user = userRepository.findById(userId);</span>
+
+<span class="pc bpc" id="L104" title="1 of 2 branches missed.">        if (user.isEmpty()) {</span>
+<span class="nc" id="L105">            return new GlobalResponseHandler().handleResponse(</span>
+                    &quot;User not found&quot;, HttpStatus.NOT_FOUND, request);
+        }
+
+<span class="fc" id="L109">        Optional&lt;Achievement&gt; achievement = achievementRepository.findById(newAchievement.getAchievement().getId());</span>
+
+<span class="pc bpc" id="L111" title="1 of 2 branches missed.">        if (achievement.isEmpty()) {</span>
+<span class="nc" id="L112">            return new GlobalResponseHandler().handleResponse(</span>
+                    &quot;Achievement not found&quot;, HttpStatus.NOT_FOUND, request);
+        }
+
+<span class="fc" id="L116">        UserAchievement userAchievement = new UserAchievement();</span>
+<span class="fc" id="L117">        userAchievement.setUser(user.get());</span>
+<span class="fc" id="L118">        userAchievement.setAchievement(achievement.get());</span>
+<span class="fc" id="L119">        userAchievement.setAchievedAt(newAchievement.getAchievedAt());</span>
+
+<span class="fc" id="L121">        userAchievementRepository.save(userAchievement);</span>
+
+<span class="fc" id="L123">        return new GlobalResponseHandler().handleResponse(</span>
+                &quot;Achievement added successfully&quot;, userAchievement, HttpStatus.CREATED, request);
+    }
+
+    @PutMapping(&quot;/{userId}&quot;)
+    public ResponseEntity&lt;?&gt; updateAchievementForUser(
+            @PathVariable Long userId,
+            @RequestBody UserAchievement updatedAchievement,
+            HttpServletRequest request) {
+        // Verificar si el usuario existe
+<span class="fc" id="L133">        Optional&lt;User&gt; user = userRepository.findById(userId);</span>
+<span class="pc bpc" id="L134" title="1 of 2 branches missed.">        if (user.isEmpty()) {</span>
+<span class="nc" id="L135">            return new GlobalResponseHandler().handleResponse(</span>
+                    &quot;User not found&quot;, HttpStatus.NOT_FOUND, request);
+        }
+
+        // Verificar si el logro (achievement) existe en la base de datos
+<span class="fc" id="L140">        Optional&lt;Achievement&gt; achievement = achievementRepository.findById(updatedAchievement.getAchievement().getId());</span>
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">        if (achievement.isEmpty()) {</span>
+<span class="nc" id="L142">            return new GlobalResponseHandler().handleResponse(</span>
+                    &quot;Achievement not found&quot;, HttpStatus.NOT_FOUND, request);
+        }
+
+        // Verificar si el logro está asociado con este usuario
+<span class="fc" id="L147">        Optional&lt;UserAchievement&gt; userAchievement = userAchievementRepository.findByUserIdAndAchievementId(userId, updatedAchievement.getAchievement().getId());</span>
+<span class="pc bpc" id="L148" title="1 of 2 branches missed.">        if (userAchievement.isEmpty()) {</span>
+<span class="nc" id="L149">            return new GlobalResponseHandler().handleResponse(</span>
+                    &quot;Achievement not found for this user&quot;, HttpStatus.NOT_FOUND, request);
+        }
+
+        // Actualizar el logro
+<span class="fc" id="L154">        UserAchievement existingAchievement = userAchievement.get();</span>
+<span class="fc" id="L155">        existingAchievement.setAchievedAt(updatedAchievement.getAchievedAt());</span>
+
+        // Guardar la actualización
+<span class="fc" id="L158">        userAchievementRepository.save(existingAchievement);</span>
+
+<span class="fc" id="L160">        return new GlobalResponseHandler().handleResponse(</span>
+                &quot;Achievement updated successfully&quot;, existingAchievement, HttpStatus.OK, request);
+    }
+
+
+    @DeleteMapping(&quot;/{userId}&quot;)
+    public ResponseEntity&lt;?&gt; deleteAchievementForUser(
+            @PathVariable Long userId,
+            @RequestBody UserAchievement achievementToDelete,
+            HttpServletRequest request) {
+        // Verificar si el usuario existe
+<span class="fc" id="L171">        Optional&lt;User&gt; user = userRepository.findById(userId);</span>
+<span class="pc bpc" id="L172" title="1 of 2 branches missed.">        if (user.isEmpty()) {</span>
+<span class="nc" id="L173">            return new GlobalResponseHandler().handleResponse(</span>
+                    &quot;User not found&quot;, HttpStatus.NOT_FOUND, request);
+        }
+
+        // Verificar si el logro existe en la base de datos
+<span class="fc" id="L178">        Optional&lt;Achievement&gt; achievement = achievementRepository.findById(achievementToDelete.getAchievement().getId());</span>
+<span class="pc bpc" id="L179" title="1 of 2 branches missed.">        if (achievement.isEmpty()) {</span>
+<span class="nc" id="L180">            return new GlobalResponseHandler().handleResponse(</span>
+                    &quot;Achievement not found&quot;, HttpStatus.NOT_FOUND, request);
+        }
+
+        // Verificar si el logro está asociado con este usuario
+<span class="fc" id="L185">        Optional&lt;UserAchievement&gt; userAchievement = userAchievementRepository.findByUserIdAndAchievementId(userId, achievementToDelete.getAchievement().getId());</span>
+<span class="pc bpc" id="L186" title="1 of 2 branches missed.">        if (userAchievement.isEmpty()) {</span>
+<span class="nc" id="L187">            return new GlobalResponseHandler().handleResponse(</span>
+                    &quot;Achievement not found for this user&quot;, HttpStatus.NOT_FOUND, request);
+        }
+
+        // Eliminar el logro
+<span class="fc" id="L192">        userAchievementRepository.delete(userAchievement.get());</span>
+
+<span class="fc" id="L194">        return new GlobalResponseHandler().handleResponse(</span>
+                &quot;Achievement deleted successfully&quot;, HttpStatus.NO_CONTENT, request);
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
