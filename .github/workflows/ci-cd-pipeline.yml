@@ -53,13 +53,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
-          mvn sonar:sonar \
-            -Dsonar.projectKey=mindmat-backend \
-            -Dsonar.projectName="MindMat Backend" \
-            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.java.coveragePlugin=jacoco \
-            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+          mvn sonar:sonar 
 
       # 8. Publicar resultados de tests
       - name: 📈 Publish Test Results
