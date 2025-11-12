@@ -106,7 +106,7 @@ jobs:
           path: target/*.jar
           retention-days: 7
 
-  # Job adicional para notificaciones
+  # Job adicional para notificar status del pipeline
   notify:
     name: 📬 Notify Results
     needs: build-and-test
@@ -119,6 +119,6 @@ jobs:
           if [ "${{ needs.build-and-test.result }}" == "success" ]; then
             echo "✅ Pipeline ejecutado exitosamente"
           else
-            echo "❌ Pipeline falló - revisa los logs"
+            echo "❌ Pipeline falló - revisar los logs"
             exit 1
           fi
