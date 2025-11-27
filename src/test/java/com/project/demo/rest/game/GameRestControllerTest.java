@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -72,5 +73,66 @@ public class GameRestControllerTest {
         // Verifica que el repositorio fue llamado una vez con el nuevo juego
         verify(gameRepository, times(1)).save(any(Game.class));
     }
+    @Test
+    public void testUpdateGame_WhenGameExists() throws Exception {
+        // Arrange: Creamos un juego existente y los datos actualizados
+        Long gameId = 1L;
+        Game existingGame = new Game(gameId, "Old Name", "Old Description");
+        Game updatedGame = new Game(gameId, "Updated Name", "Updated Description");
 
+        // Mock el comportamiento del repository
+        when(gameRepository.findById(gameId)).thenReturn(Optional.of(existingGame));
+        when(gameRepository.save(any(Game.class))).thenReturn(updatedGame);
+
+        // Act & Assert: Realizamos la solicitud PUT y verificamos la respuesta
+        mockMvc.perform(put("/games/{id}", gameId)
+                        .contentType("application/json")
+                        .content("{ \"name\": \"Updated Name\", \"description\": \"Updated Description\" }"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Updated Name"))
+                .andExpect(jsonPath("$.description").value("Updated Description"));
+
+        // Verifica que el repositorio fue llamado correctamente
+        verify(gameRepository, times(1)).findById(gameId);
+        verify(gameRepository, times(1)).save(any(Game.class));
+    }
+
+    @Test
+    public void testUpdateGame_WhenGameNotExists() throws Exception {
+        // Arrange: ID de un juego que no existe
+        Long gameId = 99L;
+        Game newGame = new Game(gameId, "New Game", "New Description");
+
+        // Mock: findById retorna vacío, simulando que el juego no existe
+        when(gameRepository.findById(gameId)).thenReturn(Optional.empty());
+        when(gameRepository.save(any(Game.class))).thenReturn(newGame);
+
+        // Act & Assert: Realizamos la solicitud PUT y verificamos que se crea el juego
+        mockMvc.perform(put("/games/{id}", gameId)
+                        .contentType("application/json")
+                        .content("{ \"name\": \"New Game\", \"description\": \"New Description\" }"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("New Game"))
+                .andExpect(jsonPath("$.description").value("New Description"));
+
+        // Verifica que el repositorio fue llamado correctamente
+        verify(gameRepository, times(1)).findById(gameId);
+        verify(gameRepository, times(1)).save(any(Game.class));
+    }
+
+    @Test
+    public void testDeleteGame() throws Exception {
+        // Arrange: ID del juego a eliminar
+        Long gameId = 1L;
+
+        // Mock: deleteById no retorna nada (void)
+        doNothing().when(gameRepository).deleteById(gameId);
+
+        // Act & Assert: Realizamos la solicitud DELETE y verificamos el status
+        mockMvc.perform(delete("/games/{id}", gameId))
+                .andExpect(status().isOk());
+
+        // Verifica que el repositorio fue llamado una vez con el ID correcto
+        verify(gameRepository, times(1)).deleteById(gameId);
+    }
 }
