@@ -97,4 +97,62 @@ public class GameRestControllerAPITest {
         verify(gameRepository, times(1)).save(any(Game.class));
     }
 
+    //ACTUALIZAR JUEGO NO EXISTENTE
+    @Test
+    void updateGame_notFound() throws Exception {
+        Long gameId = 999L;
+
+        // El repositorio responde vacío → juego no existe
+        when(gameRepository.findById(gameId)).thenReturn(Optional.empty());
+
+        String jsonBody = """
+            {
+              "name": "Intento de update",
+              "description": "No debería actualizar"
+            }
+            """;
+
+        mockMvc.perform(put("/games/{id}", gameId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonBody))
+                .andExpect(status().isNotFound()) //Debe dar 404
+                .andExpect(jsonPath("$.message").value("Game not found"));
+
+        verify(gameRepository, times(1)).findById(gameId);
+        verify(gameRepository, never()).save(any(Game.class));
+    }
+
+    //ACTUALIZAR JUEGO CON DATOS NO VALIDOS
+    @Test
+    void updateGame_invalidData() throws Exception {
+        Long gameId = 1L;
+
+        Game existing = new Game();
+        existing.setId(gameId);
+        existing.setName("Viejo nombre");
+        existing.setDescription("Vieja desc");
+
+        when(gameRepository.findById(gameId)).thenReturn(Optional.of(existing));
+
+        //Datos inválidos: nombre vacío
+        String jsonBody = """
+            {
+              "name": "",
+              "description": "Nueva desc válida"
+            }
+            """;
+
+        mockMvc.perform(put("/games/{id}", gameId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonBody))
+                .andExpect(status().isBadRequest()) //Espera 400 por validación fallida
+                .andExpect(jsonPath("$.message").value("Invalid game data"));
+
+        verify(gameRepository, times(1)).findById(gameId);
+        verify(gameRepository, never()).save(any(Game.class));
+    }
+
+
+
+
 }

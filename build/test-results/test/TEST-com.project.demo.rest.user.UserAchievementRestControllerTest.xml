@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.project.demo.rest.user.UserAchievementRestControllerTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2025-10-14T06:43:13" hostname="PT-RQUIROS-LAP" time="0.675">
+<testsuite name="com.project.demo.rest.user.UserAchievementRestControllerTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2025-12-02T05:58:13" hostname="DESKTOP-DQ4VE49" time="0.135">
   <properties/>
-  <testcase name="testGetAllAchievements()" classname="com.project.demo.rest.user.UserAchievementRestControllerTest" time="0.632"/>
-  <testcase name="testAddAchievementToUser_UserExistsAndAchievementExists()" classname="com.project.demo.rest.user.UserAchievementRestControllerTest" time="0.008"/>
-  <testcase name="testUpdateAchievementForUser_UserExistsAndAchievementExists()" classname="com.project.demo.rest.user.UserAchievementRestControllerTest" time="0.01"/>
-  <testcase name="testGetUserAchievementsByUserId_UserExists()" classname="com.project.demo.rest.user.UserAchievementRestControllerTest" time="0.011"/>
-  <testcase name="testDeleteAchievementForUser_UserExistsAndAchievementExists()" classname="com.project.demo.rest.user.UserAchievementRestControllerTest" time="0.007"/>
+  <testcase name="testGetAllAchievements()" classname="com.project.demo.rest.user.UserAchievementRestControllerTest" time="0.106"/>
+  <testcase name="testAddAchievementToUser_UserExistsAndAchievementExists()" classname="com.project.demo.rest.user.UserAchievementRestControllerTest" time="0.004"/>
+  <testcase name="testUpdateAchievementForUser_UserExistsAndAchievementExists()" classname="com.project.demo.rest.user.UserAchievementRestControllerTest" time="0.005"/>
+  <testcase name="testGetUserAchievementsByUserId_UserExists()" classname="com.project.demo.rest.user.UserAchievementRestControllerTest" time="0.012"/>
+  <testcase name="testDeleteAchievementForUser_UserExistsAndAchievementExists()" classname="com.project.demo.rest.user.UserAchievementRestControllerTest" time="0.005"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>
