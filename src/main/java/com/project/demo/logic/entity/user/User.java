@@ -1,4 +1,5 @@
 package com.project.demo.logic.entity.user;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.project.demo.logic.entity.rol.Role;
 import com.project.demo.logic.entity.user_listener.UserListener;
 import jakarta.persistence.*;
@@ -40,11 +41,19 @@ public class User implements UserDetails {
     @Column(name = "updated_at")
     private Date updatedAt;
 
+    @JsonIgnore
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role.getName().toString());
+        // Si no hay rol, no devolvemos nada y evitamos el NullPointer
+        if (role == null || role.getName() == null) {
+            return List.of();
+        }
+
+        SimpleGrantedAuthority authority =
+                new SimpleGrantedAuthority("ROLE_" + role.getName().toString());
         return List.of(authority);
     }
+
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", referencedColumnName = "id", nullable = false)
